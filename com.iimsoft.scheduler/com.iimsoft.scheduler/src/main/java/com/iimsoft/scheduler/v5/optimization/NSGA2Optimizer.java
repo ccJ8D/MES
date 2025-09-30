@@ -8,7 +8,7 @@ import java.util.*;
 import com.iimsoft.scheduler.v5.model.*;
 
 public class NSGA2Optimizer {
-    private final ObjectiveCalculator calculator;
+    private final ObjectiveEvaluator evaluator;
     private final List<ShopOrder> orders;
     private final int populationSize;
     private final int maxGenerations;
@@ -16,10 +16,10 @@ public class NSGA2Optimizer {
     private final double mutationRate;
     private final Random random = new Random();
     
-    public NSGA2Optimizer(ObjectiveCalculator calculator, List<ShopOrder> orders,
+    public NSGA2Optimizer(ObjectiveEvaluator evaluator, List<ShopOrder> orders,
                          int populationSize, int maxGenerations, 
                          double crossoverRate, double mutationRate) {
-        this.calculator = calculator;
+        this.evaluator = evaluator;
         this.orders = orders;
         this.populationSize = populationSize;
         this.maxGenerations = maxGenerations;
@@ -92,7 +92,7 @@ public class NSGA2Optimizer {
     
     private void evaluatePopulation(List<Chromosome> population) {
         for (Chromosome chromosome : population) {
-            calculator.evaluate(chromosome);
+            evaluator.evaluate(chromosome);
         }
     }
     

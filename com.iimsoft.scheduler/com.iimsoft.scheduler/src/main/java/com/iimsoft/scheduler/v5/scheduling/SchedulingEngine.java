@@ -12,13 +12,20 @@ import java.util.*;
 
 public class SchedulingEngine {
     private final ResourceCalendar calendar;
-    private final DatabaseLoader loader;
+    private final IRouterStepProvider stepProvider;
     private final Duration SAFETY_STOCK_BUFFER = Duration.ofHours(4);
     private final Duration MIN_INTERVAL = Duration.ofMinutes(30);
     
+    // Original constructor for backward compatibility
     public SchedulingEngine(ResourceCalendar calendar, DatabaseLoader loader) {
         this.calendar = calendar;
-        this.loader = loader;
+        this.stepProvider = loader;
+    }
+    
+    // New constructor accepting any IRouterStepProvider
+    public SchedulingEngine(ResourceCalendar calendar, IRouterStepProvider stepProvider) {
+        this.calendar = calendar;
+        this.stepProvider = stepProvider;
     }
     
     public ScheduleResult scheduleOrder(ShopOrder order, String bottleneckResource) {
@@ -30,7 +37,7 @@ public class SchedulingEngine {
     }
     
     private ScheduleResult forwardSchedule(ShopOrder order, String bottleneckResource) {
-        List<RouterStep> steps = loader.loadRouterSteps(order.getRouterBo());
+        List<RouterStep> steps = stepProvider.loadRouterSteps(order.getRouterBo());
         Map<String, Duration> stepDurations = calculateStepDurations(order, steps);
         LocalDateTime currentTime = order.getPlannedStartDate();
         List<StepSchedule> schedules = new ArrayList<>();
@@ -77,7 +84,7 @@ public class SchedulingEngine {
     }
     
     private ScheduleResult backwardSchedule(ShopOrder order, String bottleneckResource) {
-        List<RouterStep> steps = loader.loadRouterSteps(order.getRouterBo());
+        List<RouterStep> steps = stepProvider.loadRouterSteps(order.getRouterBo());
         Collections.reverse(steps);
         Map<String, Duration> stepDurations = calculateStepDurations(order, steps);
         LocalDateTime currentTime = order.getPlannedCompDate();
