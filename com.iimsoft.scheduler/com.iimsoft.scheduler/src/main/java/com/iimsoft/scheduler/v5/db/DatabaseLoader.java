@@ -4,10 +4,11 @@ package com.iimsoft.scheduler.v5.db;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import com.iimsoft.scheduler.v5.model.*;
+import com.iimsoft.scheduler.v5.scheduling.IRouterStepProvider;
 
 import java.util.*;
 
-public class DatabaseLoader {
+public class DatabaseLoader implements IRouterStepProvider {
     private final JdbcTemplate jdbcTemplate;
     
     public DatabaseLoader(JdbcTemplate jdbcTemplate) {

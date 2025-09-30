@@ -8,7 +8,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import java.time.ZoneId;
 import java.util.*;
 
-public class ObjectiveCalculator {
+public class ObjectiveCalculator implements ObjectiveEvaluator {
     private final SchedulingEngine engine;
     private final String bottleneckResource;
     private final JdbcTemplate jdbcTemplate;
