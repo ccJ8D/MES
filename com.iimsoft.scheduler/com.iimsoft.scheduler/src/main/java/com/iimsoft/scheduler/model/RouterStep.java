@@ -1,4 +1,4 @@
-package com.iimsoft.scheduler.v5.model;
+package com.iimsoft.scheduler.model;
 
 
 // 3. 工艺路线步骤 - model/RouterStep.java

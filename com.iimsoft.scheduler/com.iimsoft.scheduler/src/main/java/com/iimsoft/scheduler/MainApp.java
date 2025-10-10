@@ -1,14 +1,20 @@
-package com.iimsoft.scheduler.v5;
+package com.iimsoft.scheduler;
 
 // 1. 主程序入口 - MainApp.java
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import java.time.LocalDate;
 import java.util.*;
-import com.iimsoft.scheduler.v5.db.*;
-import com.iimsoft.scheduler.v5.scheduling.*;
-import com.iimsoft.scheduler.v5.model.*;
-import com.iimsoft.scheduler.v5.optimization.*;
+
+import com.iimsoft.scheduler.db.DatabaseLoader;
+import com.iimsoft.scheduler.db.InventoryCurveRepository;
+import com.iimsoft.scheduler.db.ScheduleRepository;
+import com.iimsoft.scheduler.model.Chromosome;
+import com.iimsoft.scheduler.model.ScheduleResult;
+import com.iimsoft.scheduler.model.ShopOrder;
+import com.iimsoft.scheduler.optimization.NSGA2Optimizer;
+import com.iimsoft.scheduler.optimization.ObjectiveCalculator;
+import com.iimsoft.scheduler.scheduling.BottleneckAnalyzer;
+import com.iimsoft.scheduler.scheduling.ResourceCalendar;
+import com.iimsoft.scheduler.scheduling.SchedulingEngine;
 
 public class MainApp {
     public static void main(String[] args) {
@@ -18,45 +24,39 @@ public class MainApp {
             String user = "postgres";
             String password = "password";
             
-            DriverManagerDataSource ds = new DriverManagerDataSource();
-            ds.setDriverClassName("org.postgresql.Driver");
-            ds.setUrl(url);
-            ds.setUsername(user);
-            ds.setPassword(password);
-            
-            JdbcTemplate jdbcTemplate = new JdbcTemplate(ds);
+
             
             // === 2. 初始化各组件 ===
-            DatabaseLoader loader = new DatabaseLoader(jdbcTemplate);
+            DatabaseLoader loader = new DatabaseLoader();
             ResourceCalendar calendar = new ResourceCalendar();
             calendar.initShifts(loader.loadProductionShifts());
             
             // === 3. TOC瓶颈分析 ===
-            BottleneckAnalyzer analyzer = new BottleneckAnalyzer(jdbcTemplate, calendar);
+            BottleneckAnalyzer analyzer = new BottleneckAnalyzer(calendar);
             String bottleneckId = analyzer.identifyBottleneck(
                 LocalDate.now(), LocalDate.now().plusDays(3));
-            System.out.println("识别到瓶颈资源: " + bottleneckId);
+
             
             // === 4. 加载待排程工单 ===
             List<ShopOrder> orders = loader.loadPendingShopOrders();
-            System.out.println("加载到 " + orders.size() + " 个待排程工单");
+
             
             // === 5. 初始化排程引擎和目标计算器 ===
             SchedulingEngine engine = new SchedulingEngine(calendar, loader);
             ObjectiveCalculator calculator = new ObjectiveCalculator(
-                engine, bottleneckId, jdbcTemplate);
+                engine, bottleneckId);
             
             // === 6. NSGA-II多目标优化 ===
             NSGA2Optimizer nsga2 = new NSGA2Optimizer(
                 calculator, orders, 30, 50, 0.9, 0.1);
             
-            System.out.println("开始NSGA-II优化...");
+
             List<Chromosome> paretoFront = nsga2.optimize();
-            System.out.println("优化完成，获得 " + paretoFront.size() + " 个Pareto解");
+
             
             // === 7. 保存优化结果 ===
-            ScheduleRepository scheduleRepo = new ScheduleRepository(jdbcTemplate);
-            InventoryCurveRepository invRepo = new InventoryCurveRepository(jdbcTemplate);
+            ScheduleRepository scheduleRepo = new ScheduleRepository();
+            InventoryCurveRepository invRepo = new InventoryCurveRepository();
             
             long solutionIdCounter = 1000L;
             int index = 1;

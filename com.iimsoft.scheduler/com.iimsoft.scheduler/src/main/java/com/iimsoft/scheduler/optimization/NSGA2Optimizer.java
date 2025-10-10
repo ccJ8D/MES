@@ -1,11 +1,13 @@
-package com.iimsoft.scheduler.v5.optimization;
+package com.iimsoft.scheduler.optimization;
 
 
 // 15. NSGA-II优化器 - optimization/NSGA2Optimizer.java
 
 
 import java.util.*;
-import com.iimsoft.scheduler.v5.model.*;
+
+import com.iimsoft.scheduler.model.Chromosome;
+import com.iimsoft.scheduler.model.ShopOrder;
 
 public class NSGA2Optimizer {
     private final ObjectiveCalculator calculator;
@@ -43,7 +45,8 @@ public class NSGA2Optimizer {
                 List<Chromosome> children = crossover(parent1, parent2);
                 mutate(children.get(0));
                 mutate(children.get(1));
-                
+                repairSequence(children.get(0).getSequence());
+                repairSequence(children.get(1).getSequence());
                 offspring.addAll(children);
             }
             
@@ -69,9 +72,6 @@ public class NSGA2Optimizer {
                     break;
                 }
             }
-            
-            System.out.println("Generation " + generation + 
-                ": Front size = " + fronts.get(0).size());
         }
         
         // 3. 返回Pareto前沿
@@ -85,6 +85,7 @@ public class NSGA2Optimizer {
         for (int i = 0; i < populationSize; i++) {
             List<ShopOrder> shuffled = new ArrayList<>(orders);
             Collections.shuffle(shuffled);
+            repairSequence(shuffled);
             population.add(new Chromosome(shuffled));
         }
         return population;
@@ -254,5 +255,46 @@ public class NSGA2Optimizer {
         }
         
         return betterInOne;
+    }
+
+    private void repairSequence(List<ShopOrder> sequence) {
+        Map<Integer, ShopOrder> idMap = new HashMap<>();
+        for (ShopOrder o : sequence) idMap.put(o.getShopOrder(), o);
+
+        Map<Integer, Integer> indegree = new HashMap<>();
+        Map<Integer, List<Integer>> adj = new HashMap<>();
+        for (ShopOrder o : sequence) {
+            indegree.put(o.getShopOrder(), 0);
+            adj.put(o.getShopOrder(), new ArrayList<>());
+        }
+        for (ShopOrder o : sequence) {
+            List<Integer> deps = o.getDependentOrders(); // 你要在ShopOrder加getDependencies
+            for (Integer depId : deps) {
+                if (!idMap.containsKey(depId)) continue;
+                adj.get(depId).add(o.getShopOrder());
+                indegree.put(o.getShopOrder(), indegree.get(o.getShopOrder()) + 1);
+            }
+        }
+
+        Queue<Integer> q = new ArrayDeque<>();
+        for (ShopOrder o : sequence) if (indegree.get(o.getShopOrder()) == 0) q.add(o.getShopOrder());
+        List<ShopOrder> output = new ArrayList<>();
+        while (!q.isEmpty()) {
+            Integer id = q.poll();
+            output.add(idMap.get(id));
+            for (Integer to : adj.get(id)) {
+                indegree.put(to, indegree.get(to) - 1);
+                if (indegree.get(to) == 0) q.add(to);
+            }
+        }
+        // 补充有环情况
+        if (output.size() != sequence.size()) {
+            Set<Integer> placed = new HashSet<>();
+            for (ShopOrder o : output) placed.add(o.getShopOrder());
+            for (ShopOrder o : sequence)
+                if (!placed.contains(o.getShopOrder())) output.add(o);
+        }
+        sequence.clear();
+        sequence.addAll(output);
     }
 }

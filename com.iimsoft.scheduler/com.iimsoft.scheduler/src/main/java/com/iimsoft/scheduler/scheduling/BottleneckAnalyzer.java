@@ -1,45 +1,44 @@
-package com.iimsoft.scheduler.v5.scheduling;
+package com.iimsoft.scheduler.scheduling;
 
 // 12. TOC瓶颈分析器 - scheduling/BottleneckAnalyzer.java
 
 
-import org.springframework.jdbc.core.JdbcTemplate;
 import java.time.LocalDate;
 import java.util.*;
 
 public class BottleneckAnalyzer {
-    private final JdbcTemplate jdbcTemplate;
+
     private final ResourceCalendar calendar;
     
-    public BottleneckAnalyzer(JdbcTemplate jdbcTemplate, ResourceCalendar calendar) {
-        this.jdbcTemplate = jdbcTemplate;
+    public BottleneckAnalyzer( ResourceCalendar calendar) {
+
         this.calendar = calendar;
     }
     
     public String identifyBottleneck(LocalDate startDate, LocalDate endDate) {
-        List<String> resourceIds = loadAllResourceIds();
-        String bottleneck = null;
-        double maxScore = 0.0;
+//        List<String> resourceIds = loadAllResourceIds();
+//        String bottleneck = null;
+//        double maxScore = 0.0;
+//
+//        for (String resourceId : resourceIds) {
+//            double loadFactor = calculateLoadFactor(resourceId, startDate, endDate);
+//            double utilization = calculateUtilizationFactor(resourceId);
+//            double changeover = calculateChangeoverFactor(resourceId, startDate, endDate);
+//
+//            double score = loadFactor * 0.6 + utilization * 0.3 + changeover * 0.1;
+//
+//            if (score > maxScore) {
+//                maxScore = score;
+//                bottleneck = resourceId;
+//            }
+//        }
         
-        for (String resourceId : resourceIds) {
-            double loadFactor = calculateLoadFactor(resourceId, startDate, endDate);
-            double utilization = calculateUtilizationFactor(resourceId);
-            double changeover = calculateChangeoverFactor(resourceId, startDate, endDate);
-            
-            double score = loadFactor * 0.6 + utilization * 0.3 + changeover * 0.1;
-            
-            if (score > maxScore) {
-                maxScore = score;
-                bottleneck = resourceId;
-            }
-        }
-        
-        return bottleneck;
+        return "--";
     }
     
     private List<String> loadAllResourceIds() {
         String sql = "SELECT DISTINCT resource_bo FROM mom_operation WHERE resource_bo IS NOT NULL";
-        return jdbcTemplate.queryForList(sql, String.class);
+        return null;
     }
     
     private double calculateLoadFactor(String resourceId, LocalDate start, LocalDate end) {
@@ -65,11 +64,7 @@ public class BottleneckAnalyzer {
         + "    AND op.resource_bo = ?\n"
         + "    AND so.planned_start_date BETWEEN ? AND ?";
             
-        Double totalLoad = jdbcTemplate.queryForObject(sql, Double.class,
-            resourceId, resourceId,
-            java.sql.Timestamp.valueOf(start.atStartOfDay()),
-            java.sql.Timestamp.valueOf(end.atTime(23, 59, 59))
-        );
+        Double totalLoad = 0.0;
         
         return Math.min((totalLoad != null ? totalLoad : 0) / availableMinutes, 1.0);
     }
@@ -79,7 +74,7 @@ public class BottleneckAnalyzer {
         String sql = "SELECT AVG(utilization) FROM resource_utilization_history\n"
         + "WHERE resource_id = ? AND date > CURRENT_DATE - INTERVAL '90 days'";
         
-        Double avgUtilization = jdbcTemplate.queryForObject(sql, Double.class, resourceId);
+        Double avgUtilization = 1.0;
         return avgUtilization != null ? avgUtilization / 100.0 : 0.7;
     }
     
@@ -88,11 +83,7 @@ public class BottleneckAnalyzer {
         + "FROM resource_changeover\n"
         + "WHERE resource_id = ? AND changeover_date BETWEEN ? AND ? ";
         
-        Double totalChangeover = jdbcTemplate.queryForObject(sql, Double.class,
-            resourceId,
-            java.sql.Timestamp.valueOf(start.atStartOfDay()),
-            java.sql.Timestamp.valueOf(end.atTime(23, 59, 59))
-        );
+        Double totalChangeover = 1.0;
         
         long availableMinutes = calendar.getAvailableMinutes(resourceId, start, end);
         if (availableMinutes == 0) return 0;

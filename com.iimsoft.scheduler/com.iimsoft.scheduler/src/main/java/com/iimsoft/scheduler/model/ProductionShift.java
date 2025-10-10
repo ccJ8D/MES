@@ -1,4 +1,4 @@
-package com.iimsoft.scheduler.v5.model;
+package com.iimsoft.scheduler.model;
 
 // 6. 生产班次 - model/ProductionShift.java
 

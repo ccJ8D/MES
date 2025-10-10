@@ -1,4 +1,4 @@
-package com.iimsoft.scheduler.v5.model;
+package com.iimsoft.scheduler.model;
 
 // 5. 步骤排程 - model/StepSchedule.java
 

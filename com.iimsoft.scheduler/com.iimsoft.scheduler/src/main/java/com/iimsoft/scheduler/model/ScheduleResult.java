@@ -1,19 +1,18 @@
-package com.iimsoft.scheduler.v5.model;
+package com.iimsoft.scheduler.model;
 
 // 4. 排程结果 - model/ScheduleResult.java
-import java.time.LocalDateTime;
 import java.util.List;
 
 public class ScheduleResult {
-    private String shopOrderBo;
+    private Integer shopOrderBo;
     private List<StepSchedule> stepSchedules;
     
-    public ScheduleResult(String shopOrderBo, List<StepSchedule> stepSchedules) {
+    public ScheduleResult(Integer shopOrderBo, List<StepSchedule> stepSchedules) {
         this.shopOrderBo = shopOrderBo;
         this.stepSchedules = stepSchedules;
     }
     
     // Getters
-    public String getShopOrderBo() { return shopOrderBo; }
+    public Integer getShopOrderBo() { return shopOrderBo; }
     public List<StepSchedule> getStepSchedules() { return stepSchedules; }
 }

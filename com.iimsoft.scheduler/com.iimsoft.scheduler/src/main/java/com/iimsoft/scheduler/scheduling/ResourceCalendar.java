@@ -1,8 +1,8 @@
-package com.iimsoft.scheduler.v5.scheduling;
+package com.iimsoft.scheduler.scheduling;
 
 // 11. 资源日历管理 - scheduling/ResourceCalendar.java
 
-import com.iimsoft.scheduler.v5.model.ProductionShift;
+import com.iimsoft.scheduler.model.ProductionShift;
 import java.time.*;
 import java.util.*;
 

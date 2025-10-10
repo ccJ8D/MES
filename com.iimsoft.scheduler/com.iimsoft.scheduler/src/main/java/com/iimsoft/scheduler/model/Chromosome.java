@@ -1,4 +1,4 @@
-package com.iimsoft.scheduler.v5.model;
+package com.iimsoft.scheduler.model;
 
 
 // 7. 染色体 - model/Chromosome.java
