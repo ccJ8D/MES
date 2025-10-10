@@ -31,11 +31,11 @@ public class MainApp {
             ResourceCalendar calendar = new ResourceCalendar();
             calendar.initShifts(loader.loadProductionShifts());
             
-            // === 3. TOC瓶颈分析 ===
+            // === 3. TOC瓶颈分析（按 router 识别瓶颈工艺路线） ===
             BottleneckAnalyzer analyzer = new BottleneckAnalyzer(jdbcTemplate, calendar);
-            String bottleneckId = analyzer.identifyBottleneck(
+            String bottleneckRouter = analyzer.identifyBottleneck(
                 LocalDate.now(), LocalDate.now().plusDays(3));
-            System.out.println("识别到瓶颈资源: " + bottleneckId);
+            System.out.println("识别到瓶颈工艺路线: " + bottleneckRouter);
             
             // === 4. 加载待排程工单 ===
             List<ShopOrder> orders = loader.loadPendingShopOrders();
@@ -44,7 +44,7 @@ public class MainApp {
             // === 5. 初始化排程引擎和目标计算器 ===
             SchedulingEngine engine = new SchedulingEngine(calendar, loader);
             ObjectiveCalculator calculator = new ObjectiveCalculator(
-                engine, bottleneckId, jdbcTemplate);
+                engine, bottleneckRouter, jdbcTemplate);
             
             // === 6. NSGA-II多目标优化 ===
             NSGA2Optimizer nsga2 = new NSGA2Optimizer(
@@ -66,7 +66,7 @@ public class MainApp {
                 
                 // 保存排程结果到MOM_SHOP_ORDER_SCHEDULE
                 for (ShopOrder order : solution.getSequence()) {
-                    ScheduleResult result = engine.scheduleOrder(order, bottleneckId);
+                    ScheduleResult result = engine.scheduleOrder(order, bottleneckRouter);
                     scheduleRepo.saveSchedule(result);
                 }
                 

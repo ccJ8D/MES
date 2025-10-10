@@ -10,14 +10,14 @@ import java.util.*;
 
 public class ObjectiveCalculator {
     private final SchedulingEngine engine;
-    private final String bottleneckResource;
+    private final String bottleneckRouter;
     private final JdbcTemplate jdbcTemplate;
     private final List<InventoryPoint> inventoryCurve = new ArrayList<>();
     
-    public ObjectiveCalculator(SchedulingEngine engine, String bottleneckResource, 
+    public ObjectiveCalculator(SchedulingEngine engine, String bottleneckRouter, 
                               JdbcTemplate jdbcTemplate) {
         this.engine = engine;
-        this.bottleneckResource = bottleneckResource;
+        this.bottleneckRouter = bottleneckRouter;
         this.jdbcTemplate = jdbcTemplate;
     }
     
@@ -39,7 +39,7 @@ public class ObjectiveCalculator {
         
         // 3. 模拟排程过程
         for (ShopOrder order : sequence) {
-            ScheduleResult result = engine.scheduleOrder(order, bottleneckResource);
+            ScheduleResult result = engine.scheduleOrder(order, bottleneckRouter);
             
             // 计算完成时间
             double finishEpoch = result.getStepSchedules().stream()
