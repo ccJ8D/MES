@@ -2,33 +2,47 @@ package com.iimsoft.scheduler.phase1.bom;
 
 import com.iimsoft.scheduler.common.Component;
 
-import java.math.BigDecimal;
 import java.util.*;
 
 /**
- * Phase2 演示用内存 BOM：
- *   10001 (成品) -> 20001 (usage 2), 20002 (usage 1)
- *   20001 -> 30001 (usage 3)
- * 可自行修改。
+ * 支持：
+ *  - 默认示例数据
+ *  - 动态 addComponent
+ *  - 批量接口（直接组合）
  */
-public class InMemoryBomProvider implements BomProvider {
+public class InMemoryBomProvider implements BulkBomProvider {
 
-    private final Map<Integer, List<Component>> index = new HashMap<>();
+    private final Map<Integer, List<Component>> index = new LinkedHashMap<>();
 
-    public InMemoryBomProvider() {
-        // 示例数据
-        add(new Component(10001, 20001, new BigDecimal("2")));
-        add(new Component(10001, 20002, new BigDecimal("1")));
-        add(new Component(20001, 30001, new BigDecimal("3")));
-        // 可继续添加
+
+    public InMemoryBomProvider addComponent(Component c) {
+        index.computeIfAbsent(c.getParentItemId(), k -> new ArrayList<>()).add(c);
+        return this;
     }
 
-    private void add(Component c) {
-        index.computeIfAbsent(c.getParentItemId(), k -> new ArrayList<>()).add(c);
+    public InMemoryBomProvider addComponents(Collection<Component> components) {
+        if (components != null) {
+            for (Component c : components) addComponent(c);
+        }
+        return this;
+    }
+
+    public void clear() {
+        index.clear();
     }
 
     @Override
     public List<Component> getComponentsOf(int parentItemId) {
-        return index.getOrDefault(parentItemId, new ArrayList<>());
+        return index.getOrDefault(parentItemId, Collections.emptyList());
+    }
+
+    @Override
+    public Map<Integer, List<Component>> getComponentsBulk(Collection<Integer> parentItemIds) {
+        Map<Integer, List<Component>> map = new LinkedHashMap<>();
+        if (parentItemIds == null) return map;
+        for (Integer pid : parentItemIds) {
+            map.put(pid, getComponentsOf(pid));
+        }
+        return map;
     }
 }

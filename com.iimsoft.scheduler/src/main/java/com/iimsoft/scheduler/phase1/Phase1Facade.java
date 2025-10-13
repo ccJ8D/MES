@@ -3,36 +3,35 @@ package com.iimsoft.scheduler.phase1;
 import com.iimsoft.scheduler.common.Component;
 import com.iimsoft.scheduler.common.DailyDemand;
 import com.iimsoft.scheduler.common.ScheduleTask;
+import com.iimsoft.scheduler.phase0.RateResolver;
+import com.iimsoft.scheduler.phase0.WorkCenterResolver;
 import com.iimsoft.scheduler.phase1.bom.BomDailyExpander;
 import com.iimsoft.scheduler.phase1.bom.BomProvider;
 import com.iimsoft.scheduler.phase1.model.ChildDailyDemandTable;
-import com.iimsoft.scheduler.phase1.service.RateService;
-import com.iimsoft.scheduler.phase1.service.ShiftCalendarService;
-import com.iimsoft.scheduler.phase1.service.TopLevelTaskBuilder;
+import com.iimsoft.scheduler.phase1.shift.ShiftCalendarService;
+import com.iimsoft.scheduler.phase1.model.TopLevelTaskBuilder;
 import com.iimsoft.scheduler.phase1.model.ChildLevelScheduler;
 import com.iimsoft.scheduler.phase1.model.LevelContribution;
 import com.iimsoft.scheduler.phase1.lot.LotSplitStrategy;
 import com.iimsoft.scheduler.phase1.lot.SimpleLotSplitStrategy;
 import com.iimsoft.scheduler.util.TimeAlignUtil;
+import lombok.Getter;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.*;
 
 
-/**
- *  * 阶段性1门户，主要任务构建任务
- * 层序多轮 backward Facade
- * 每次都倒退得到一个比较粗的时间段
- * 顶层 → 层 1 → 层 2 … 直到无子件。
- */
+
 public class Phase1Facade {
 
+    @Getter
     public static class Result {
-        private final List<ScheduleTask> allTasks;
-        private final List<ScheduleTask> topLevelTasks;
-        private final List<ScheduleTask> childTasks;
-        private final ChildDailyDemandTable childDailyDemandTable;
+        private final List<ScheduleTask> allTasks;//所有的任务
+        private final List<ScheduleTask> topLevelTasks; //所有顶级任务
+        private final List<ScheduleTask> childTasks; //所有子任务
+        private final ChildDailyDemandTable childDailyDemandTable; //所有子件的日需求表
 
         public Result(List<ScheduleTask> allTasks,
                       List<ScheduleTask> topLevelTasks,
@@ -44,10 +43,6 @@ public class Phase1Facade {
             this.childDailyDemandTable = childDailyDemandTable;
         }
 
-        public List<ScheduleTask> getAllTasks() { return allTasks; }
-        public List<ScheduleTask> getTopLevelTasks() { return topLevelTasks; }
-        public List<ScheduleTask> getChildTasks() { return childTasks; }
-        public ChildDailyDemandTable getChildDailyDemandTable() { return childDailyDemandTable; }
     }
 
 
@@ -56,42 +51,47 @@ public class Phase1Facade {
     private final BomProvider bomProvider;
 
     private final ShiftCalendarService calendar;
-    private final RateService rateService;
+    private final RateResolver rateResolver;
     private final LotSplitStrategy lotSplitStrategy;
 
     private final int maxDepth;
-    private final BigDecimal childBufferHours; // buffer（小时，整点逻辑里向上 ceil）
     private final BigDecimal maxBatchQty;
 
+    private final WorkCenterResolver workCenterResolver;
+
     public Phase1Facade(ShiftCalendarService calendar,
-                        RateService rateService,
+                        RateResolver rateResolver,
                         BomProvider bomProvider,
                         int maxDepth,
-                        BigDecimal maxBatchQty,
-                        BigDecimal childBufferHours) {
+                        BigDecimal maxBatchQty, WorkCenterResolver workCenterResolver
+    ) {
         this.calendar = calendar;
-        this.rateService = rateService;
+        this.rateResolver = rateResolver;
 
 
         this.bomProvider = bomProvider;
         this.maxDepth = maxDepth <= 0 ? 10 : maxDepth;
         this.maxBatchQty = (maxBatchQty == null || maxBatchQty.signum() <= 0)
                 ? new BigDecimal("999999") : maxBatchQty;
-        this.childBufferHours = childBufferHours == null ? BigDecimal.ZERO : childBufferHours;
+        this.workCenterResolver = workCenterResolver;
 
-        this.topLevelTaskBuilder = new TopLevelTaskBuilder(calendar, rateService);
+
+        this.topLevelTaskBuilder = new TopLevelTaskBuilder(calendar, rateResolver,workCenterResolver);
+
         this.bomDailyExpander = new BomDailyExpander(bomProvider, this.maxDepth);
+
         this.lotSplitStrategy = new SimpleLotSplitStrategy(this.maxBatchQty);
     }
 
 
     public Result taskBuilding(List<DailyDemand> topLevelDailyDemands){
 
-
+        // 1. 构造顶层任务
         List<ScheduleTask> topTasks = topLevelTaskBuilder.build(topLevelDailyDemands);
+        // 2. 计算所有子件的日需求表
         ChildDailyDemandTable childQtyTable = bomDailyExpander.expand(topLevelDailyDemands);
 
-        // 3 层序队列：初始放顶层（level=0）
+
         List<ScheduledNode> currentLevel = new ArrayList<>();
         for (ScheduleTask t : topTasks) {
             currentLevel.add(new ScheduledNode(t, 0));
@@ -103,10 +103,9 @@ public class Phase1Facade {
         int nextTaskId = findMaxTaskId(topTasks) + 1;
         int depth = 0;
 
-        ChildLevelScheduler levelScheduler = new ChildLevelScheduler(calendar, rateService, lotSplitStrategy);
+        ChildLevelScheduler levelScheduler = new ChildLevelScheduler(calendar, rateResolver, lotSplitStrategy,workCenterResolver);
 
         while (!currentLevel.isEmpty() && depth < maxDepth) {
-            // 3.1 当前层的直接子件贡献
             List<LevelContribution> contributions = buildDirectChildContributions(currentLevel);
 
             if (contributions.isEmpty()) {
@@ -139,7 +138,7 @@ public class Phase1Facade {
         for (ScheduleTask t : topTasks) idMap.put(t.getTaskId(), t);
         for (ScheduleTask t : allChildTasks) idMap.put(t.getTaskId(), t);
 
-        // rebuild 所有（需要给父任务添加子件 predecessors；子件本身不改）
+
         List<ScheduleTask> rebuiltTop = new ArrayList<ScheduleTask>();
         for (ScheduleTask t : topTasks) {
             Set<Integer> deps = parentToChildrenGlobal.get(t.getTaskId());
@@ -153,6 +152,7 @@ public class Phase1Facade {
                         t.getProcessHours(),
                         t.getStart(),
                         t.getEnd(),
+                        t.getWorkCenterId(),
                         new ArrayList<Integer>(deps)
                 ));
             }
@@ -172,6 +172,7 @@ public class Phase1Facade {
                         c.getProcessHours(),
                         c.getStart(),
                         c.getEnd(),
+                        c.getWorkCenterId(),
                         new ArrayList<Integer>(deps)
                 ));
             }
@@ -215,8 +216,8 @@ public class Phase1Facade {
 
                 // 子件 requiredBy = 该父 start - buffer
                 LocalDateTime requiredBy = parent.getStart();
-                if (childBufferHours.signum() > 0) {
-                    int buf = childBufferHours.setScale(0, BigDecimal.ROUND_UP).intValue();
+                if (c.getBufferHours().signum() > 0) {
+                    int buf = c.getBufferHours().setScale(0, RoundingMode.UP).intValue();
                     requiredBy = requiredBy.minusHours(buf);
                 }
                 requiredBy = TimeAlignUtil.ceilToHour(requiredBy);

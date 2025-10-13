@@ -1,9 +1,8 @@
-package com.iimsoft.scheduler.phase1.service;
+package com.iimsoft.scheduler.phase1.shift;
 
 import com.iimsoft.mes.model.*;
 import com.iimsoft.util.Services;
 import com.iimsofttech.ad.dao.IQueryBL;
-import com.iimsofttech.model.InterfaceWrapperHelper;
 
 import java.sql.Timestamp;
 import java.time.*;
@@ -88,8 +87,7 @@ public class ShiftCalendarService {
             }
             if (workCenterShifts.isEmpty()){
                 wcTemplates.put(workCenterId,Arrays.asList(
-                        new DailyTemplate(LocalTime.of(8,0), LocalTime.of(12,0)),
-                        new DailyTemplate(LocalTime.of(13,0), LocalTime.of(17,0))
+                        new DailyTemplate(LocalTime.of(8,0), LocalTime.of(18,0))
                 ));
             } else {
                 List<I_mom_user_shift_definition> shiftDefinitions = queryBL.createQueryBuilder(I_mom_user_shift_definition.class)
@@ -106,8 +104,7 @@ public class ShiftCalendarService {
             clearCache(workCenterId);
         }catch (Exception e){
             wcTemplates.put(workCenterId,Arrays.asList(
-                    new DailyTemplate(LocalTime.of(8,0), LocalTime.of(12,0)),
-                    new DailyTemplate(LocalTime.of(13,0), LocalTime.of(17,0))
+                    new DailyTemplate(LocalTime.of(8,0), LocalTime.of(18,0))
             ));
         }
 
@@ -339,7 +336,6 @@ public class ShiftCalendarService {
         List<DailyTemplate> tpls = wcTemplates.getOrDefault(wc, Collections.<DailyTemplate>emptyList());
         List<Segment> segs = new ArrayList<Segment>();
         if (!tpls.isEmpty()) {
-            // 如果 autoRollTemplate = true，任何日期都用同一模板映射
             for (DailyTemplate dt : tpls) {
                 LocalDateTime s = LocalDateTime.of(day, dt.start);
                 LocalDateTime e = LocalDateTime.of(day, dt.end);

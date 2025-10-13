@@ -1,8 +1,8 @@
 package com.iimsoft.scheduler.phase2.resource;
 
 import com.iimsoft.scheduler.common.ScheduleTask;
-import com.iimsoft.scheduler.phase1.service.ShiftCalendarService;
-import com.iimsoft.scheduler.phase1.service.RateService;
+import com.iimsoft.scheduler.phase0.RateResolver;
+import com.iimsoft.scheduler.phase1.shift.ShiftCalendarService;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -29,14 +29,14 @@ import java.util.*;
 public class BackwardWorkCenterSequencer {
 
     private final ShiftCalendarService calendar;
-    private final RateService rateService;
+    private final RateResolver rateResolver;
     private final boolean keepNotEarlierThanOriginalBackward;
 
     public BackwardWorkCenterSequencer(ShiftCalendarService calendar,
-                                       RateService rateService,
+                                       RateResolver rateResolver,
                                        boolean keepNotEarlierThanOriginalBackward) {
         this.calendar = calendar;
-        this.rateService = rateService;
+        this.rateResolver = rateResolver;
         this.keepNotEarlierThanOriginalBackward = keepNotEarlierThanOriginalBackward;
     }
 

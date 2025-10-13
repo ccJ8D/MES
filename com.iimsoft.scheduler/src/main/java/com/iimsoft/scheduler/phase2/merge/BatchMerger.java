@@ -1,7 +1,7 @@
 package com.iimsoft.scheduler.phase2.merge;
 
 import com.iimsoft.scheduler.common.ScheduleTask;
-import com.iimsoft.scheduler.phase1.service.RateService;
+import com.iimsoft.scheduler.phase0.RateResolver;
 
 import java.math.BigDecimal;
 import java.util.*;
@@ -21,12 +21,12 @@ import java.util.*;
  */
 public class BatchMerger {
 
-    private final RateService rateService;
+    private final RateResolver rateResolver;
     private final boolean verifyWindowCapacity; // 如果要严格校验窗口是否足够装下新工时
 
-    public BatchMerger(RateService rateService,
+    public BatchMerger(RateResolver rateResolver,
                        boolean verifyWindowCapacity) {
-        this.rateService = rateService;
+        this.rateResolver = rateResolver;
         this.verifyWindowCapacity = verifyWindowCapacity;
     }
 
@@ -86,8 +86,9 @@ public class BatchMerger {
                 }
             }
 
+            BigDecimal rateForItem = rateResolver.getRateForItem(master.getItemId());
             // 校验窗口容量（可选）
-            BigDecimal newHours = rateService.computeProcessHoursCeil(sumQty);
+            BigDecimal newHours = rateResolver.computeProcessHoursCeil(sumQty,rateForItem);
             int hoursInt = newHours.intValue();
             long spanHours = java.time.Duration.between(minStart, maxEnd).toHours();
 

@@ -28,10 +28,7 @@ public class BomDailyExpander {
         this.maxDepth = maxDepth <= 0 ? 10 : maxDepth;
     }
 
-    /**
-     * @param topLevelDemands 顶层日需求（Phase1 输入）
-     * @return 所有子件（不含顶层自身）日需求表
-     */
+
     public ChildDailyDemandTable expand(List<DailyDemand> topLevelDemands) {
         ChildDailyDemandTable table = new ChildDailyDemandTable();
 
@@ -42,7 +39,6 @@ public class BomDailyExpander {
             for (Map.Entry<LocalDate, BigDecimal> dayEntry : itemEntry.getValue().entrySet()) {
                 LocalDate day = dayEntry.getKey();
                 BigDecimal qty = dayEntry.getValue();
-                // 递归展开
                 expandRecursive(topItem, day, qty, 0, table, new ArrayDeque<>());
             }
         }
@@ -53,8 +49,7 @@ public class BomDailyExpander {
         Map<Integer, Map<LocalDate, BigDecimal>> agg = new HashMap<>();
         for (DailyDemand d : list) {
             if (d.getQuantity() == null || d.getQuantity().signum() <= 0) continue;
-            agg.computeIfAbsent(d.getItemId(), k -> new HashMap<>())
-                    .merge(d.getDay(), d.getQuantity(), BigDecimal::add);
+            agg.computeIfAbsent(d.getItemId(), k -> new HashMap<>()).merge(d.getDay(), d.getQuantity(), BigDecimal::add);
         }
         return agg;
     }

@@ -51,8 +51,7 @@ public class SimpleLotSplitStrategy implements LotSplitStrategy {
                     if (toFill.signum() <= 0) break;
                     if (ps.remaining.signum() <= 0) continue;
                     BigDecimal take = ps.remaining.min(toFill);
-                    BigDecimal old = alloc.get(ps.parentTaskId);
-                    alloc.put(ps.parentTaskId, old == null ? take : old.add(take));
+                    alloc.compute(ps.parentTaskId, (k, old) -> old == null ? take : old.add(take));
                     ps.remaining = ps.remaining.subtract(take);
                     toFill = toFill.subtract(take);
                 }

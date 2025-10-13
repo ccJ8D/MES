@@ -1,7 +1,7 @@
 package com.iimsoft.scheduler.phase2.resource;
 
 import com.iimsoft.scheduler.common.ScheduleTask;
-import com.iimsoft.scheduler.phase1.service.ShiftCalendarService;
+import com.iimsoft.scheduler.phase1.shift.ShiftCalendarService;
 
 import java.time.LocalDateTime;
 import java.util.*;

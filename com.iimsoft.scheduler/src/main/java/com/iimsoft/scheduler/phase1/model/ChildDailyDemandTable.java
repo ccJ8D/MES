@@ -4,11 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.*;
 
-/**
- * 保存多级展开后的“子件日需求”结果。
- * 结构：
- *   itemId -> ( LocalDate -> quantity )
- */
+
 public class ChildDailyDemandTable {
 
     private final Map<Integer, Map<LocalDate, BigDecimal>> table = new HashMap<>();

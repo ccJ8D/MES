@@ -1,13 +1,13 @@
 package com.iimsoft.scheduler.phase1.model;
 
+import com.iimsoft.scheduler.phase0.RateResolver;
+import com.iimsoft.scheduler.phase0.WorkCenterResolver;
 import com.iimsoft.scheduler.phase1.lot.LotBatch;
 import com.iimsoft.scheduler.phase1.lot.LotSplitContext;
 import com.iimsoft.scheduler.phase1.lot.LotSplitStrategy;
 import com.iimsoft.scheduler.common.ScheduleTask;
 
-import com.iimsoft.scheduler.phase1.service.RateService;
-import com.iimsoft.scheduler.phase1.service.ShiftCalendarService;
-import com.iimsoft.scheduler.util.ShiftUtil;
+import com.iimsoft.scheduler.phase1.shift.ShiftCalendarService;
 import com.iimsoft.scheduler.util.TimeAlignUtil;
 
 import java.math.BigDecimal;
@@ -30,18 +30,21 @@ public class ChildLevelScheduler {
     }
 
     private final ShiftCalendarService calendar;
-    private final RateService rateService;
+    private final RateResolver rateResolver;
     private final LotSplitStrategy lotSplitStrategy;
+    private final WorkCenterResolver workCenterResolver;
 
 
     public ChildLevelScheduler(ShiftCalendarService calendar,
-                               RateService rateService,
-                               LotSplitStrategy lotSplitStrategy
-                                ) {
+                               RateResolver rateResolver,
+                               LotSplitStrategy lotSplitStrategy,
+                               WorkCenterResolver workCenterResolver
+    ) {
         this.calendar = calendar;
-        this.rateService = rateService;
+        this.rateResolver = rateResolver;
         this.lotSplitStrategy = lotSplitStrategy;
 
+        this.workCenterResolver = workCenterResolver;
     }
 
     public LayerResult scheduleLevel(List<LevelContribution> contributions,
@@ -53,11 +56,7 @@ public class ChildLevelScheduler {
         // 1. 聚合同一子件
         Map<Integer, List<LevelContribution>> byItem = new HashMap<>();
         for (LevelContribution c : contributions) {
-            List<LevelContribution> list = byItem.get(c.getChildItemId());
-            if (list == null) {
-                list = new ArrayList<LevelContribution>();
-                byItem.put(c.getChildItemId(), list);
-            }
+            List<LevelContribution> list = byItem.computeIfAbsent(c.getChildItemId(), k -> new ArrayList<LevelContribution>());
             list.add(c);
         }
 
@@ -86,11 +85,12 @@ public class ChildLevelScheduler {
 
             // 2. 为每个批次 backward
             for (LotBatch b : batches) {
-                BigDecimal hoursCeil = rateService.computeProcessHoursCeil(b.getQty());
+
+                BigDecimal rateForItem = rateResolver.getRateForItem(b.getItemId());
+                BigDecimal hoursCeil = rateResolver.computeProcessHoursCeil(b.getQty(),rateForItem);
                 int h = hoursCeil.intValue();
 
-
-                int workCenterId = ShiftUtil.getLineByItem(b.getItemId()); // 每个顶层件可能不同
+                int workCenterId = workCenterResolver.getWorkCenterId(b.getItemId());
                 calendar.registerDailyTemplate(workCenterId);
 
                 LocalDateTime due = TimeAlignUtil.ceilToHour(b.getDueDate());
@@ -105,9 +105,9 @@ public class ChildLevelScheduler {
                         hoursCeil,
                         start,
                         end,
+                        workCenterId,
                         new ArrayList<Integer>()
                 );
-                childTask.setWorkCenterId(workCenterId);
                 childTasks.add(childTask);
 
                 for (Integer pid : b.getParentQtyMap().keySet()) {

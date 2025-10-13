@@ -1,5 +1,6 @@
 package com.iimsoft.scheduler.controller;
 
+import com.iimsoft.scheduler.process.SchedulerProcess;
 import com.iimsoft.ui.web.config.WebConfig;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -12,6 +13,7 @@ public class SchedulerTestController {
 
     @GetMapping("/testScheduler")
     public void test() throws Exception {
-
+        SchedulerProcess process = new SchedulerProcess();
+        process.doIt();
     }
 }

@@ -1,15 +1,7 @@
 package com.iimsoft.scheduler.phase3.nsga;
 
-import com.iimsoft.scheduler.facade.Phase4BatchMergeProcessor;
-import com.iimsoft.scheduler.facade.Phase4JitTighteningProcessor;
-import com.iimsoft.scheduler.facade.Phase4ResourceSequencingProcessor;
-import com.iimsoft.scheduler.phase1.service.ShiftCalendarService;
-import com.iimsoft.scheduler.phase2.merge.BatchMergeStrategy;
-import com.iimsoft.scheduler.phase2.merge.BatchMerger;
-import com.iimsoft.scheduler.phase2.merge.SimpleExactWindowMergeStrategy;
+import com.iimsoft.scheduler.phase1.shift.ShiftCalendarService;
 import com.iimsoft.scheduler.common.ScheduleTask;
-import com.iimsoft.scheduler.phase1.service.RateService;
-import com.iimsoft.scheduler.phase2.tigent.TighteningConfig;
 
 import java.util.*;
 
@@ -27,16 +19,14 @@ import java.util.*;
 public class ScheduleDecoder {
 
     private final ShiftCalendarService calendar;
-    private final RateService rateService;
+
     private final boolean applyBatchMerge;
     private final boolean applyTightening;
 
     public ScheduleDecoder(ShiftCalendarService calendar,
-                           RateService rateService,
                            boolean applyBatchMerge,
                            boolean applyTightening) {
         this.calendar = calendar;
-        this.rateService = rateService;
         this.applyBatchMerge = applyBatchMerge;
         this.applyTightening = applyTightening;
     }
@@ -83,26 +73,26 @@ public class ScheduleDecoder {
             }
         }
 
-        // 3. 资源序列化（Forward）
-        Phase4ResourceSequencingProcessor seqProcessor =
-                new Phase4ResourceSequencingProcessor(calendar, rateService,
-                        true,  // allowEqualEndStart
-                        true,  // keepBackwardJIT
-                        true); // strictPredecessorFinish
-        seqProcessor.process(reordered); // 直接修改内存中的 tasks
-
-        // 4. 批次合并（可选）
-        if (applyBatchMerge) {
-            BatchMerger merger = new BatchMerger(rateService, true);
-            BatchMergeStrategy strategy = new SimpleExactWindowMergeStrategy();
-            new Phase4BatchMergeProcessor(merger, strategy).process(reordered);
-        }
-
-        // 5. Tightening（可选）
-        if (applyTightening) {
-            TighteningConfig cfg = TighteningConfig.defaultConfig();
-            new Phase4JitTighteningProcessor(calendar, rateService, cfg).process(reordered);
-        }
+//        // 3. 资源序列化（Forward）
+//        Phase4ResourceSequencingProcessor seqProcessor =
+//                new Phase4ResourceSequencingProcessor(calendar, null,
+//                        true,  // allowEqualEndStart
+//                        true,  // keepBackwardJIT
+//                        true); // strictPredecessorFinish
+//        seqProcessor.process(reordered); // 直接修改内存中的 tasks
+//
+//        // 4. 批次合并（可选）
+//        if (applyBatchMerge) {
+//            BatchMerger merger = new BatchMerger(null, true);
+//            BatchMergeStrategy strategy = new SimpleExactWindowMergeStrategy();
+//            new Phase4BatchMergeProcessor(merger, strategy).process(reordered);
+//        }
+//
+//        // 5. Tightening（可选）
+//        if (applyTightening) {
+//            TighteningConfig cfg = TighteningConfig.defaultConfig();
+//            new Phase4JitTighteningProcessor(calendar, null, cfg).process(reordered);
+//        }
 
         return reordered;
     }
@@ -115,6 +105,7 @@ public class ScheduleDecoder {
                 t.getProcessHours(),
                 t.getStart(),
                 t.getEnd(),
+                t.getWorkCenterId(),
                 new ArrayList<Integer>(t.getPredecessors())
         );
         c.setWorkCenterId(t.getWorkCenterId());

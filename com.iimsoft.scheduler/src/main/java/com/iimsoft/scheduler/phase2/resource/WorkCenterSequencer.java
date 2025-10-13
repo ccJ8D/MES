@@ -1,8 +1,8 @@
 package com.iimsoft.scheduler.phase2.resource;
 
 import com.iimsoft.scheduler.common.ScheduleTask;
-import com.iimsoft.scheduler.phase1.service.ShiftCalendarService;
-import com.iimsoft.scheduler.phase1.service.RateService;
+import com.iimsoft.scheduler.phase0.RateResolver;
+import com.iimsoft.scheduler.phase1.shift.ShiftCalendarService;
 import com.iimsoft.scheduler.util.TopoSorter;
 
 import java.math.BigDecimal;
@@ -18,18 +18,18 @@ import java.util.*;
 public class WorkCenterSequencer {
 
     private final ShiftCalendarService calendar;
-    private final RateService rateService;
+    private final RateResolver rateResolver;
     private final boolean allowEqualEndStart;
     private final boolean keepBackwardJIT;
     private final boolean strictPredecessorFinish;
 
     public WorkCenterSequencer(ShiftCalendarService calendar,
-                               RateService rateService,
+                               RateResolver rateResolver,
                                boolean allowEqualEndStart,
                                boolean keepBackwardJIT,
                                boolean strictPredecessorFinish) {
         this.calendar = calendar;
-        this.rateService = rateService;
+        this.rateResolver = rateResolver;
         this.allowEqualEndStart = allowEqualEndStart;
         this.keepBackwardJIT = keepBackwardJIT;
         this.strictPredecessorFinish = strictPredecessorFinish;

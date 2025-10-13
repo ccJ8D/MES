@@ -34,6 +34,7 @@ public class ScheduleTask {
                         BigDecimal processHours,
                         LocalDateTime start,
                         LocalDateTime end,
+                        int wcId,
                         List<Integer> predecessors) {
         this.taskId = taskId;
         this.itemId = itemId;
@@ -42,6 +43,7 @@ public class ScheduleTask {
         this.start = start;
         this.end = end;
         this.predecessors = predecessors == null ? Collections.emptyList() : predecessors;
+        this.workCenterId = wcId;
     }
 
 

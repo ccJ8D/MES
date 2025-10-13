@@ -1,13 +1,11 @@
 package com.iimsoft.scheduler.phase2;
 
 import com.iimsoft.scheduler.common.ScheduleTask;
-import com.iimsoft.scheduler.facade.Phase4ResourceSequencingProcessor;
-import com.iimsoft.scheduler.phase1.service.RateService;
-import com.iimsoft.scheduler.phase1.service.ShiftCalendarService;
+import com.iimsoft.scheduler.phase0.RateResolver;
+import com.iimsoft.scheduler.phase1.shift.ShiftCalendarService;
 import com.iimsoft.scheduler.phase2.resource.BackwardWorkCenterSequencer;
 import com.iimsoft.scheduler.phase2.resource.WorkCenterSequenceResult;
 import com.iimsoft.scheduler.phase2.resource.WorkCenterSequencer;
-import com.iimsoft.scheduler.util.DependencyIndex;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -16,14 +14,14 @@ import java.util.Map;
 
 public class Phase2Facade {
     private final ShiftCalendarService calendar;
-    private final RateService rateService;
+    private final RateResolver rateResolver;
     private final boolean allowEqualEndStart;
     private final boolean keepBackwardJIT;
     private final boolean strictPredecessorFinish;
 
-    public Phase2Facade(ShiftCalendarService calendar, RateService rateService, boolean allowEqualEndStart, boolean keepBackwardJIT, boolean strictPredecessorFinish) {
+    public Phase2Facade(ShiftCalendarService calendar, RateResolver rateResolver, boolean allowEqualEndStart, boolean keepBackwardJIT, boolean strictPredecessorFinish) {
         this.calendar = calendar;
-        this.rateService = rateService;
+        this.rateResolver = rateResolver;
         this.allowEqualEndStart = allowEqualEndStart;
         this.keepBackwardJIT = keepBackwardJIT;
         this.strictPredecessorFinish = strictPredecessorFinish;
@@ -44,7 +42,7 @@ public class Phase2Facade {
         List<WorkCenterSequenceResult> perWC = new ArrayList<WorkCenterSequenceResult>();
         WorkCenterSequencer sequencer = new WorkCenterSequencer(
                 calendar,
-                rateService,
+                rateResolver,
                 allowEqualEndStart,
                 keepBackwardJIT,
                 strictPredecessorFinish
@@ -52,7 +50,7 @@ public class Phase2Facade {
 
         BackwardWorkCenterSequencer backwardSequencer = new BackwardWorkCenterSequencer(
                 calendar,
-                rateService,
+                rateResolver,
                 allowEqualEndStart
         );
         for (Map.Entry<Integer, List<ScheduleTask>> e : byWC.entrySet()) {
