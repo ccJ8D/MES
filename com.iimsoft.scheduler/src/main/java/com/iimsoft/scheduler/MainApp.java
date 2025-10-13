@@ -1,25 +1,26 @@
 package com.iimsoft.scheduler;
 
+// Phase1: 基础日历、产能、顶层任务
+import com.iimsoft.scheduler.common.DailyDemand;
+import com.iimsoft.scheduler.common.ScheduleTask;
 
-import com.iimsoft.scheduler.bom.BomProvider;
-import com.iimsoft.scheduler.bom.InMemoryBomProvider;
-import com.iimsoft.scheduler.facade.*;
-import com.iimsoft.scheduler.kpi.KpiCollector;
-import com.iimsoft.scheduler.merge.BatchMergeStrategy;
-import com.iimsoft.scheduler.merge.BatchMerger;
-import com.iimsoft.scheduler.merge.SimpleExactWindowMergeStrategy;
-import com.iimsoft.scheduler.model.DailyDemand;
-import com.iimsoft.scheduler.model.ScheduleTask;
-import com.iimsoft.scheduler.nsga.Chromosome;
-import com.iimsoft.scheduler.service.RateService;
-import com.iimsoft.scheduler.shift.WorkCalendarService;
-import com.iimsoft.scheduler.tigent.TighteningConfig;
+// Phase2: BOM
+import com.iimsoft.scheduler.phase1.Phase1Facade;
+import com.iimsoft.scheduler.phase1.bom.BomProvider;
+import com.iimsoft.scheduler.phase1.bom.InMemoryBomProvider;
+
+// Phase3: 多层级排程
+
+// Phase4: 资源序列化、批次合并、JIT Tightening、KPI
+import com.iimsoft.scheduler.phase1.service.RateService;
+import com.iimsoft.scheduler.phase1.service.ShiftCalendarService;
+import com.iimsoft.scheduler.phase2.Phase2Facade;
+
+// Phase5: NSGA-II多目标优化
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalTime;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -38,91 +39,36 @@ public class MainApp {
         demands.add(new DailyDemand(10001, nm.plusDays(1), new BigDecimal("200")));
 
         // 日历
-        WorkCalendarService calendar = new WorkCalendarService();
-        calendar.registerDailyTemplate(1, Arrays.asList(
-                new WorkCalendarService.DailyTemplate(LocalTime.of(8,0), LocalTime.of(12,0)),
-                new WorkCalendarService.DailyTemplate(LocalTime.of(13,0), LocalTime.of(17,0))
-        ));
-        calendar.registerDailyTemplate(0, Arrays.asList(
-                new WorkCalendarService.DailyTemplate(LocalTime.of(8,0), LocalTime.of(12,0)),
-                new WorkCalendarService.DailyTemplate(LocalTime.of(13,0), LocalTime.of(17,0))
-        ));
-
+        ShiftCalendarService calendar = new ShiftCalendarService();
         RateService rateService = new RateService(new BigDecimal("50")); // 50件/小时
         BomProvider bomProvider = new InMemoryBomProvider();
 
-        MultiLevelPhase3PlanningFacade facade = new MultiLevelPhase3PlanningFacade(
-                calendar,
-                rateService,
-                1,                 // 顶层工作中心
-                1,                 // 子件默认工作中心
-                bomProvider,
-                10,                // max depth
-                new BigDecimal("120"), // max batch qty
-                new BigDecimal("0")    // buffer hours
-        );
-
-        MultiLevelPhase3PlanningFacade.Result result = facade.plan(demands);
-
-        Phase4ResourceSequencingProcessor processor = new Phase4ResourceSequencingProcessor(
-                calendar,
-                rateService,
-                true,   // allowEqualEndStart
-                true,   // keepBackwardJIT
-                true    // strictPredecessorFinish
-        );
-        Phase4ResourceSequencingProcessor.Result seq = processor.process(result.getAllTasks());
-
-
-//// 打印调整后的任务
-//        for (ScheduleTask t : seq.getAllTasks()) {
-//            System.out.printf("T%d WC=%d Start=%s End=%s%n",
-//                    t.getTaskId(), t.getWorkCenterId(), t.getStart(), t.getEnd());
-//        }
-//
-
-        // 1. 假设我们已有经过 sequencing 的 tasks 列表 (from previous steps)
-        List<ScheduleTask> sequencedTasks = seq.getAllTasks(); // 需自建
-
-        // 2. 执行批次合并
-        BatchMerger batchMerger = new BatchMerger(rateService, true);
-        BatchMergeStrategy strategy = new SimpleExactWindowMergeStrategy();
-        Phase4BatchMergeProcessor processor_merge = new Phase4BatchMergeProcessor(batchMerger, strategy);
-
-        Phase4BatchMergeProcessor.Result mergeRes = processor_merge.process(sequencedTasks);
-
-
-        // C: JIT Tightening
-        TighteningConfig config = TighteningConfig.defaultConfig();
-        Phase4JitTighteningProcessor tighteningProcessor =
-                new Phase4JitTighteningProcessor(calendar, rateService, config);
-        Phase4JitTighteningProcessor.Result tightRes =
-                tighteningProcessor.process(mergeRes.getTasks());
-
-
-
-        List<ScheduleTask> tasks = tightRes.getTasks(); // 自行实现
-
-        KpiCollector collector = new KpiCollector();
-        Phase4KpiProcessor kpiprocessor = new Phase4KpiProcessor(collector);
-        Phase4KpiProcessor.Result kpires = kpiprocessor.process(tasks);
-
-
-
-        Phase5OptimizerFacade.Config cfg = new Phase5OptimizerFacade.Config();
-        cfg.populationSize = 30;
-        cfg.generations = 20;
-        cfg.applyBatchMerge = false;
-        cfg.applyTightening = false;
-
-        Phase5OptimizerFacade optimizer = new Phase5OptimizerFacade(calendar, rateService, cfg);
-        Phase5OptimizerFacade.Result res = optimizer.optimize(tasks);
-
-        System.out.println("Final population size = " + res.finalPopulation.size());
-        System.out.println("First front solutions = " + res.firstFront.size());
-        int i = 0;
-        for (Chromosome c : res.firstFront) {
-            System.out.println("Pareto #" + (i++) + " : " + c);
+        Phase1Facade phase1 = new Phase1Facade(calendar, rateService, bomProvider,10,BigDecimal.valueOf(10000),BigDecimal.valueOf(10));
+        Phase1Facade.Result result = phase1.taskBuilding(demands);
+        List<ScheduleTask> tasks = result.getAllTasks();
+        System.out.println("Phase1 任务数: " + tasks.size());
+        System.out.println("--------------------------------------------------");
+        System.out.printf("%-5s %-8s %-12s %-12s %-20s%n", "TID", "WC", "Start", "End", "Predecessors");
+        System.out.println("--------------------------------------------------");
+        for (ScheduleTask t : tasks) {
+            System.out.printf("%-5d %-8d %-12s %-12s %-20s%n",
+                    t.getTaskId(), t.getWorkCenterId(), t.getStart(), t.getEnd(), t.getPredecessors());
         }
+
+
+        Phase2Facade phase2 = new Phase2Facade(calendar, rateService,true,true,true);
+        Phase2Facade.Result sequence = phase2.sequence(tasks);
+
+        System.out.println("Phase2 排序后任务数: " + sequence.getAllTasks().size());
+        System.out.println("--------------------------------------------------");
+        System.out.printf("%-5s %-8s %-12s %-12s %-20s%n", "TID", "WC", "Start", "End", "Predecessors");
+        System.out.println("--------------------------------------------------");
+        for (ScheduleTask t : sequence.getAllTasks()) {
+            System.out.printf("%-5d %-8d %-12s %-12s %-20s%n",
+                    t.getTaskId(), t.getWorkCenterId(), t.getStart(), t.getEnd(), t.getPredecessors());
+        }
+
+
+
     }
 }

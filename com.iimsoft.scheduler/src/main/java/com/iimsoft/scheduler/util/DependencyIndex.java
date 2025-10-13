@@ -1,22 +1,10 @@
 package com.iimsoft.scheduler.util;
 
-import com.iimsoft.scheduler.model.ScheduleTask;
+import com.iimsoft.scheduler.common.ScheduleTask;
 
 import java.util.*;
 
-/**
- * 构建 parent/child 快速索引:
- *  - predecessors: 对应 "child -> parent"
- *  - childrenIndex:  parent -> children
- *
- * 注意：你的模型中 predecessors 存的是”直接子件任务“还是”父任务“？
- * 在前面设计里：父任务的 predecessors 是子任务（child -> parent 反向表示）。
- * 所以:
- *   predecessors: t.predecessors() => 子任务IDs
- *   childrenIndex: childId -> parentTasks  (我们需要反向)
- *
- * 为了 tightening 计算 parentMinStart，需要 child -> 所有 parent.start。
- */
+
 public class DependencyIndex {
 
     private final Map<Integer, ScheduleTask> idMap = new HashMap<Integer, ScheduleTask>();

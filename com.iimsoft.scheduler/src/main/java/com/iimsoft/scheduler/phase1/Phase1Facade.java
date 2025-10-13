@@ -1,29 +1,32 @@
-package com.iimsoft.scheduler.facade;
+package com.iimsoft.scheduler.phase1;
 
 import com.iimsoft.scheduler.common.Component;
-import com.iimsoft.scheduler.phase1.service.ShiftCalendarService;
-import com.iimsoft.scheduler.phase1.model.ChildDailyDemandTable;
-import com.iimsoft.scheduler.phase1.bom.BomDailyExpander;
-import com.iimsoft.scheduler.phase1.bom.BomProvider;
-import com.iimsoft.scheduler.phase1.model.ChildLevelScheduler;
 import com.iimsoft.scheduler.common.DailyDemand;
 import com.iimsoft.scheduler.common.ScheduleTask;
+import com.iimsoft.scheduler.phase1.bom.BomDailyExpander;
+import com.iimsoft.scheduler.phase1.bom.BomProvider;
+import com.iimsoft.scheduler.phase1.model.ChildDailyDemandTable;
+import com.iimsoft.scheduler.phase1.service.RateService;
+import com.iimsoft.scheduler.phase1.service.ShiftCalendarService;
 import com.iimsoft.scheduler.phase1.service.TopLevelTaskBuilder;
+import com.iimsoft.scheduler.phase1.model.ChildLevelScheduler;
 import com.iimsoft.scheduler.phase1.model.LevelContribution;
 import com.iimsoft.scheduler.phase1.lot.LotSplitStrategy;
 import com.iimsoft.scheduler.phase1.lot.SimpleLotSplitStrategy;
-import com.iimsoft.scheduler.phase1.service.RateService;
 import com.iimsoft.scheduler.util.TimeAlignUtil;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
 
+
 /**
- * 层序多轮 backward Facade（JDK8）：
+ *  * 阶段性1门户，主要任务构建任务
+ * 层序多轮 backward Facade
+ * 每次都倒退得到一个比较粗的时间段
  * 顶层 → 层 1 → 层 2 … 直到无子件。
  */
-public class MultiLevelPhase3PlanningFacade {
+public class Phase1Facade {
 
     public static class Result {
         private final List<ScheduleTask> allTasks;
@@ -47,31 +50,29 @@ public class MultiLevelPhase3PlanningFacade {
         public ChildDailyDemandTable getChildDailyDemandTable() { return childDailyDemandTable; }
     }
 
+
     private final TopLevelTaskBuilder topLevelTaskBuilder;
     private final BomDailyExpander bomDailyExpander;
     private final BomProvider bomProvider;
+
     private final ShiftCalendarService calendar;
     private final RateService rateService;
     private final LotSplitStrategy lotSplitStrategy;
 
-    private final int topLevelWorkCenterId;
-    private final int childDefaultWorkCenterId;
     private final int maxDepth;
-    private final BigDecimal maxBatchQty;
     private final BigDecimal childBufferHours; // buffer（小时，整点逻辑里向上 ceil）
+    private final BigDecimal maxBatchQty;
 
-    public MultiLevelPhase3PlanningFacade(ShiftCalendarService calendar,
-                                          RateService rateService,
-                                          int topLevelWorkCenterId,
-                                          int childDefaultWorkCenterId,
-                                          BomProvider bomProvider,
-                                          int maxDepth,
-                                          BigDecimal maxBatchQty,
-                                          BigDecimal childBufferHours) {
+    public Phase1Facade(ShiftCalendarService calendar,
+                        RateService rateService,
+                        BomProvider bomProvider,
+                        int maxDepth,
+                        BigDecimal maxBatchQty,
+                        BigDecimal childBufferHours) {
         this.calendar = calendar;
         this.rateService = rateService;
-        this.topLevelWorkCenterId = topLevelWorkCenterId;
-        this.childDefaultWorkCenterId = childDefaultWorkCenterId;
+
+
         this.bomProvider = bomProvider;
         this.maxDepth = maxDepth <= 0 ? 10 : maxDepth;
         this.maxBatchQty = (maxBatchQty == null || maxBatchQty.signum() <= 0)
@@ -83,27 +84,26 @@ public class MultiLevelPhase3PlanningFacade {
         this.lotSplitStrategy = new SimpleLotSplitStrategy(this.maxBatchQty);
     }
 
-    public Result plan(List<DailyDemand> topLevelDailyDemands) {
-        // 1 顶层 backward
-        List<ScheduleTask> topTasks = topLevelTaskBuilder.build(topLevelDailyDemands);
 
-        //
+    public Result taskBuilding(List<DailyDemand> topLevelDailyDemands){
+
+
+        List<ScheduleTask> topTasks = topLevelTaskBuilder.build(topLevelDailyDemands);
         ChildDailyDemandTable childQtyTable = bomDailyExpander.expand(topLevelDailyDemands);
 
         // 3 层序队列：初始放顶层（level=0）
-        List<ScheduledNode> currentLevel = new ArrayList<ScheduledNode>();
+        List<ScheduledNode> currentLevel = new ArrayList<>();
         for (ScheduleTask t : topTasks) {
             currentLevel.add(new ScheduledNode(t, 0));
         }
 
-        List<ScheduleTask> allChildTasks = new ArrayList<ScheduleTask>();
-        Map<Integer, Set<Integer>> parentToChildrenGlobal = new HashMap<Integer, Set<Integer>>();
+        List<ScheduleTask> allChildTasks = new ArrayList<>();
+        Map<Integer, Set<Integer>> parentToChildrenGlobal = new HashMap<>();
 
         int nextTaskId = findMaxTaskId(topTasks) + 1;
         int depth = 0;
 
-        ChildLevelScheduler levelScheduler =
-                new ChildLevelScheduler(calendar, rateService, lotSplitStrategy);
+        ChildLevelScheduler levelScheduler = new ChildLevelScheduler(calendar, rateService, lotSplitStrategy);
 
         while (!currentLevel.isEmpty() && depth < maxDepth) {
             // 3.1 当前层的直接子件贡献
@@ -124,7 +124,7 @@ public class MultiLevelPhase3PlanningFacade {
             mergeParentChildLinks(parentToChildrenGlobal, layerResult.parentToChildren);
 
             // 3.4 新层作为下一轮父层
-            List<ScheduledNode> nextLevel = new ArrayList<ScheduledNode>();
+            List<ScheduledNode> nextLevel = new ArrayList<>();
             for (ScheduleTask child : newChildren) {
                 nextLevel.add(new ScheduledNode(child, depth + 1));
             }
@@ -273,6 +273,8 @@ public class MultiLevelPhase3PlanningFacade {
         }
     }
 
+
+    //任务层级节点
     private static class ScheduledNode {
         final ScheduleTask task;
         final int level;

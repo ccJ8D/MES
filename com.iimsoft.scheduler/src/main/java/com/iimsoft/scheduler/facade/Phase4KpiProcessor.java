@@ -1,9 +1,9 @@
 package com.iimsoft.scheduler.facade;
 
-import com.iimsoft.scheduler.kpi.KpiCollector;
-import com.iimsoft.scheduler.kpi.KpiJsonExporter;
-import com.iimsoft.scheduler.kpi.KpiReport;
-import com.iimsoft.scheduler.model.ScheduleTask;
+import com.iimsoft.scheduler.phase2.kpi.KpiCollector;
+import com.iimsoft.scheduler.phase2.kpi.KpiJsonExporter;
+import com.iimsoft.scheduler.phase2.kpi.KpiReport;
+import com.iimsoft.scheduler.common.ScheduleTask;
 
 import java.util.List;
 

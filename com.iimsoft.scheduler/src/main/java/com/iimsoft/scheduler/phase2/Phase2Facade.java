@@ -1,35 +1,27 @@
-package com.iimsoft.scheduler.facade;
+package com.iimsoft.scheduler.phase2;
 
 import com.iimsoft.scheduler.common.ScheduleTask;
-
+import com.iimsoft.scheduler.facade.Phase4ResourceSequencingProcessor;
+import com.iimsoft.scheduler.phase1.service.RateService;
 import com.iimsoft.scheduler.phase1.service.ShiftCalendarService;
+import com.iimsoft.scheduler.phase2.resource.BackwardWorkCenterSequencer;
 import com.iimsoft.scheduler.phase2.resource.WorkCenterSequenceResult;
 import com.iimsoft.scheduler.phase2.resource.WorkCenterSequencer;
-import com.iimsoft.scheduler.phase1.service.RateService;
+import com.iimsoft.scheduler.util.DependencyIndex;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
-/**
- * Phase4 Step A:
- *  统一入口：对所有工作中心执行资源序列化（Forward）→ 返回调整统计。
- *  后续可在这里串联：
- *    - 批次合并
- *    - JIT Tightening
- *    - KPI 计算
- */
-public class Phase4ResourceSequencingProcessor {
-
+public class Phase2Facade {
     private final ShiftCalendarService calendar;
     private final RateService rateService;
     private final boolean allowEqualEndStart;
     private final boolean keepBackwardJIT;
     private final boolean strictPredecessorFinish;
 
-    public Phase4ResourceSequencingProcessor(ShiftCalendarService calendar,
-                                             RateService rateService,
-                                             boolean allowEqualEndStart,
-                                             boolean keepBackwardJIT,
-                                             boolean strictPredecessorFinish) {
+    public Phase2Facade(ShiftCalendarService calendar, RateService rateService, boolean allowEqualEndStart, boolean keepBackwardJIT, boolean strictPredecessorFinish) {
         this.calendar = calendar;
         this.rateService = rateService;
         this.allowEqualEndStart = allowEqualEndStart;
@@ -37,7 +29,7 @@ public class Phase4ResourceSequencingProcessor {
         this.strictPredecessorFinish = strictPredecessorFinish;
     }
 
-    public Result process(List<ScheduleTask> tasks) {
+    public Result sequence(List<ScheduleTask> tasks) {
         // 1. 按工作中心分组
         Map<Integer, List<ScheduleTask>> byWC = new HashMap<Integer, List<ScheduleTask>>();
         for (ScheduleTask t : tasks) {
@@ -58,8 +50,13 @@ public class Phase4ResourceSequencingProcessor {
                 strictPredecessorFinish
         );
 
+        BackwardWorkCenterSequencer backwardSequencer = new BackwardWorkCenterSequencer(
+                calendar,
+                rateService,
+                allowEqualEndStart
+        );
         for (Map.Entry<Integer, List<ScheduleTask>> e : byWC.entrySet()) {
-            perWC.add(sequencer.sequence(e.getKey(), tasks));
+            perWC.add(backwardSequencer.sequence(e.getKey(), tasks));
         }
 
         return new Result(tasks, perWC);
@@ -83,8 +80,8 @@ public class Phase4ResourceSequencingProcessor {
             sb.append("Resource Sequencing Summary:\n");
             for (WorkCenterSequenceResult r : perWorkCenter) {
                 sb.append("  WC ").append(r.getWorkCenterId())
-                  .append(" total=").append(r.getTotal())
-                  .append(" moved=").append(r.getMovedCount()).append("\n");
+                        .append(" total=").append(r.getTotal())
+                        .append(" moved=").append(r.getMovedCount()).append("\n");
             }
             return sb.toString();
         }

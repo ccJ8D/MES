@@ -1,9 +1,9 @@
 package com.iimsoft.scheduler.facade;
 
-import com.iimsoft.scheduler.merge.BatchMergeStrategy;
-import com.iimsoft.scheduler.merge.BatchMerger;
-import com.iimsoft.scheduler.merge.MergeReport;
-import com.iimsoft.scheduler.model.ScheduleTask;
+import com.iimsoft.scheduler.phase2.merge.BatchMergeStrategy;
+import com.iimsoft.scheduler.phase2.merge.BatchMerger;
+import com.iimsoft.scheduler.phase2.merge.MergeReport;
+import com.iimsoft.scheduler.common.ScheduleTask;
 
 import java.util.ArrayList;
 import java.util.Collections;

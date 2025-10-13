@@ -1,6 +1,6 @@
 package com.iimsoft.scheduler.util;
 
-import com.iimsoft.scheduler.model.ScheduleTask;
+import com.iimsoft.scheduler.common.ScheduleTask;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -33,11 +33,7 @@ public class TopoSorter {
                 if (workCenterTaskIds.contains(pre)) {
                     // 内部依赖才计算入度
                     in++;
-                    List<Integer> list = adj.get(pre);
-                    if (list == null) {
-                        list = new ArrayList<Integer>();
-                        adj.put(pre, list);
-                    }
+                    List<Integer> list = adj.computeIfAbsent(pre, k -> new ArrayList<Integer>());
                     list.add(t.getTaskId());
                 }
             }

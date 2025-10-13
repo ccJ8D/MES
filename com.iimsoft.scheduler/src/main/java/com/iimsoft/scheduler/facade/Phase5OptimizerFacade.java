@@ -1,9 +1,10 @@
 package com.iimsoft.scheduler.facade;
 
-import com.iimsoft.scheduler.model.ScheduleTask;
-import com.iimsoft.scheduler.nsga.*;
-import com.iimsoft.scheduler.service.RateService;
-import com.iimsoft.scheduler.shift.WorkCalendarService;
+import com.iimsoft.scheduler.common.ScheduleTask;
+import com.iimsoft.scheduler.phase1.service.RateService;
+import com.iimsoft.scheduler.phase1.service.ShiftCalendarService;
+import com.iimsoft.scheduler.phase3.nsga.*;
+import com.iimsoft.scheduler.phase5.nsga.*;
 
 import java.util.*;
 
@@ -31,11 +32,11 @@ public class Phase5OptimizerFacade {
         }
     }
 
-    private final WorkCalendarService calendar;
+    private final ShiftCalendarService calendar;
     private final RateService rateService;
     private final Config cfg;
 
-    public Phase5OptimizerFacade(WorkCalendarService calendar,
+    public Phase5OptimizerFacade(ShiftCalendarService calendar,
                                  RateService rateService,
                                  Config cfg) {
         this.calendar = calendar;

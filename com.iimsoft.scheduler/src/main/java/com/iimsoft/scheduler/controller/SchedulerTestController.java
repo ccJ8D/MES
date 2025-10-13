@@ -1,7 +1,5 @@
 package com.iimsoft.scheduler.controller;
 
-import com.iimsoft.mes.controller.TestController;
-import com.iimsoft.scheduler.process.ScheduShopOrderProcess;
 import com.iimsoft.ui.web.config.WebConfig;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -14,7 +12,6 @@ public class SchedulerTestController {
 
     @GetMapping("/testScheduler")
     public void test() throws Exception {
-        ScheduShopOrderProcess process = new ScheduShopOrderProcess();
-        process.doIt();
+
     }
 }
